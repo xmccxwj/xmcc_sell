@@ -8,6 +8,6 @@ public class TestController {
 
     @GetMapping("/hello")
     public String hello(){
-        return "hello spring-boot";
+        return "hello spring-boot 改动代码git测试";
     }
 }
