@@ -21,7 +21,6 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     public ResultResponse<List<ProductCategoryVo>> findAll() {
         List<ProductCategory> productCategoryList = productCategoryRepository.findAll();
         //利用流转换为vo集合
-
         return ResultResponse.success(productCategoryList.stream().map(productCategory ->
                 ProductCategoryVo.build(productCategory)
         ).collect(Collectors.toList()));

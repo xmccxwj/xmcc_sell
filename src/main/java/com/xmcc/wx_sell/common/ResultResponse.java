@@ -34,6 +34,7 @@ public class ResultResponse<T> {
     public static <T>ResultResponse  fail(T t){
         return  new ResultResponse<>(ResultEnums.FAIL.getCode(),ResultEnums.FAIL.getMsg(),t);
     }
+
     //成功 携带数据
     public static <T> ResultResponse success(T t){
         return new ResultResponse(ResultEnums.SUCCESS.getCode(),ResultEnums.SUCCESS.getMsg(),t);
