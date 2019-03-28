@@ -8,6 +8,7 @@ import org.hibernate.annotations.DynamicInsert;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Transient;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
@@ -39,4 +40,7 @@ public class OrderDetail implements Serializable {
 
     /** 商品小图. */
     private String productIcon;
+
+    @Transient
+    private String productImg;
 }

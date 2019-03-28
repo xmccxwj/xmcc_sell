@@ -10,9 +10,11 @@ import org.hibernate.annotations.DynamicUpdate;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Transient;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 
 @Entity
@@ -53,5 +55,9 @@ public class OrderMaster implements Serializable {
 
     /** 更新时间. */
     private Date updateTime;
+
+    //订单项列表
+    @Transient //忽略与数据库对应
+    private List<OrderDetail> orderDetailList;
 
 }

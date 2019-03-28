@@ -12,12 +12,18 @@ import com.xmcc.wx_sell.exception.CustomException;
 import com.xmcc.wx_sell.repository.OrderMasterRepository;
 import com.xmcc.wx_sell.service.OrderDetailService;
 import com.xmcc.wx_sell.service.OrderMasterService;
+import com.xmcc.wx_sell.service.PayService;
 import com.xmcc.wx_sell.service.ProductInfoService;
 import com.xmcc.wx_sell.util.BigDecimalUtil;
 import com.xmcc.wx_sell.util.IDUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -25,6 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class OrderMasterServiceImpl implements OrderMasterService {
 
     @Autowired
@@ -36,7 +43,8 @@ public class OrderMasterServiceImpl implements OrderMasterService {
     @Autowired
     private OrderDetailService orderDetailService;
 
-
+    @Autowired
+    private PayService payService;
     /**
      * 1.根据购物车(订单项) 传来的商品id 插叙对应的商品 取得价格等相关信息 如果没查到 订单生成失败
      * 2.比较库存 ，库存不足 订单生成失败
@@ -104,4 +112,96 @@ public class OrderMasterServiceImpl implements OrderMasterService {
         map.put("orderId",orderId);
         return ResultResponse.success(map);
     }
+
+    @Override
+    public ResultResponse queryList(String openid, Integer page, Integer size) {
+        if(StringUtils.isBlank(openid)){
+            return ResultResponse.fail(OrderEnum.OPENID_ERROR.getMsg());
+        }
+
+        PageRequest pageRequest = PageRequest.of(page == null || page-1 < 0 ? 0 : page-1, size == null || size < 3 ? 3 : size);
+        Page<OrderMaster> byBuyerOpenid = orderMasterRepository.findByBuyerOpenid(openid, pageRequest);
+        return ResultResponse.success(byBuyerOpenid.getContent());
+    }
+
+    @Override
+    public ResultResponse<OrderMaster> findByOrderIdAndOpenId(String orderId, String openid) {
+        if(StringUtils.isBlank(openid)){
+            return ResultResponse.fail(ResultEnums.PARAM_ERROR.getMsg()+":"+openid);
+        }
+        if(StringUtils.isBlank(orderId)){
+            return ResultResponse.fail(ResultEnums.PARAM_ERROR.getMsg()+":"+orderId);
+        }
+        //有不有都返回 让调用者根据情况来处理
+        OrderMaster orderMaster = orderMasterRepository.findByOrderIdAndBuyerOpenid(orderId, openid);
+        return ResultResponse.success(orderMaster);
+    }
+
+    /**
+     * @param openid ：微信唯一标识号
+     * @param orderId :订单id
+     * @return
+     * 1.判断订单状态 如果是已完成 就不能取消了
+     * 2.修改订单状态
+     * 3.查询订单关联的订单项，然后获得商品
+     * 4.增加商品库存
+     * 5.如果已经付款则退款
+     */
+    @Override
+    @Transactional
+    public ResultResponse cancelOrder(String openid, String orderId) {
+        // 根据上面的方法查询订单
+        ResultResponse<OrderMaster> byOrderIdAndOpenId = findByOrderIdAndOpenId(orderId, openid);
+        //尽量少抛出异常 因为异常栈的读取是很浪费效率的  所以在没有事务出现之前可以用返回失败来确定
+        //但是一旦有了增删改的代码之后 必须抛出异常 来控制事务回滚
+        if(byOrderIdAndOpenId.getCode()==ResultEnums.FAIL.getCode()){
+            return byOrderIdAndOpenId;
+        }
+        OrderMaster orderMaster = byOrderIdAndOpenId.getData();
+        if(orderMaster==null){
+            return ResultResponse.fail(OrderEnum.ORDER_NOT_EXITS.getMsg());
+        }
+        if(orderMaster.getOrderStatus()==OrderEnum.FINSH.getCode()||orderMaster.getOrderStatus()==OrderEnum.CANCEL.getCode()){
+            return ResultResponse.fail(OrderEnum.FINSH_CANCEL.getMsg());
+        }
+        //2.修改订单状态
+        updateStatus(orderMaster,OrderEnum.CANCEL.getCode());
+
+
+        //3.查询订单关联的订单项，然后获得商品  这里需要把之前偷懒的地方提出来 作为一个方法
+        //因为业务层一般不会调用其他模块的dao层
+        ResultResponse<List<OrderDetail>> orderDetailListByOrderId = orderDetailService.findOrderDetailListByOrderId(orderId);
+        List<OrderDetail> orderDetailList = orderDetailListByOrderId.getData();
+        if(!CollectionUtils.isEmpty(orderDetailList)) {
+            //这里用批量修改操作，需要挨个去查询商品 所以就不去批量操作了 直接自己写sql实现
+            for (OrderDetail orderDetail : orderDetailList) {
+                ResultResponse<Integer> result = productInfoService.incrStockById(orderDetail.getProductQuantity(), orderDetail.getProductId());
+                //不在上面的方法抛出异常 因为有的业务没有修改成功 也是可以的
+                if (result.getData() < 1) {
+                    //商品下架 也可以修改  只要失败就回滚 不然会丢失商品
+                    log.error("商品库存增加失败,商品id为:{},商品名称为:{}", orderDetail.getProductId(), orderDetail.getProductName());
+                    throw new CustomException("商品库存增加失败");//抛出异常事务回滚
+                }
+            }
+        }
+        if(orderMaster.getPayStatus()==PayEnum.FINISH.getCode()){
+            log.info("发起退款...");
+            payService.refund(orderMaster);
+        }
+
+        return ResultResponse.success();
+    }
+
+    @Override
+    @Transactional
+    public ResultResponse updateStatus(OrderMaster orderMaster, int status) {
+        if(orderMaster==null){
+            throw new CustomException(OrderEnum.ORDER_NOT_EXITS.getMsg());
+        }
+        orderMaster.setOrderStatus(status);
+        orderMasterRepository.save(orderMaster);
+        return ResultResponse.success();
+    }
+
+
 }

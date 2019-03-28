@@ -3,6 +3,8 @@ package com.xmcc.wx_sell.controller;
 import com.google.common.collect.Maps;
 import com.xmcc.wx_sell.common.ResultResponse;
 import com.xmcc.wx_sell.dto.OrderMasterDto;
+
+import com.xmcc.wx_sell.service.OrderDetailService;
 import com.xmcc.wx_sell.service.OrderMasterService;
 import com.xmcc.wx_sell.util.JsonUtil;
 import io.swagger.annotations.Api;
@@ -10,9 +12,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -26,6 +26,9 @@ import java.util.stream.Collectors;
 public class OrderMasterController {
    @Autowired
     private OrderMasterService orderMasterService;
+
+   @Autowired
+   private OrderDetailService orderDetailService;
     @PostMapping("create")
     @ApiOperation(value = "创建订单接口", httpMethod = "POST", response =ResultResponse.class)
     //@Valid配合刚才在DTO上的注解完成校验
@@ -41,4 +44,28 @@ public class OrderMasterController {
        }
         return orderMasterService.insertOrder(orderMasterDto);
     }
+
+
+    @GetMapping("list")
+    @ApiOperation(value = "订单查询接口", httpMethod = "GET", response =ResultResponse.class)
+    public ResultResponse list(String openid,Integer page,Integer size){
+
+        return orderMasterService.queryList(openid,page,size);
+    }
+
+    @GetMapping("detail")
+    @ApiOperation(value = "根据订单与OPENID查询订单详情", httpMethod = "GET", response =ResultResponse.class)
+    public ResultResponse detail(@RequestParam(value="openid",required = true) String openid,
+                                 @RequestParam(value ="orderId",required = true) String orderId){
+        return orderDetailService.queryByOrderIdWithOrderMaster(openid,orderId);
+    }
+
+    @PostMapping("cancel")
+    @ApiOperation(value = "取消订单", httpMethod = "POST", response =ResultResponse.class)
+    public ResultResponse cancel(@RequestParam(value="openid",required = true) String openid,
+                                 @RequestParam(value ="orderId",required = true) String orderId){
+        return orderMasterService.cancelOrder(openid,orderId);
+    }
+
+
 }

@@ -17,6 +17,7 @@ public class OrderDetailDto implements Serializable {
     private String productId;
     @NotNull(message = "商品数量不能为空")
     @Min(value = 1,message = "数量不能少于一件")
-    @ApiModelProperty(value = "商品数量",dataType = "Integer")
+    //example = "0" 防止.NumberFormatException: For input string: ""
+    @ApiModelProperty(value = "商品数量",dataType = "Integer",example = "0")
     private Integer productQuantity;
 }

@@ -1,7 +1,7 @@
 #druid
 spring:
   druid:
-    url: jdbc:mysql://172.18.37.190:3306/sell?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT
+    url: jdbc:mysql://172.18.34.13:3306/sell?useUnicode=true&characterEncoding=utf8&serverTimezone=GMT
     driverClassName: com.mysql.jdbc.Driver
     username: root
     password: 123456
@@ -11,9 +11,16 @@ spring:
     show-sql: true  #显示sql语句
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss  #日期格式化标准
-    default-property-inclusion: non_null  #返回json时 忽略null
+    #default-property-inclusion: non_null  #返回json时 忽略null
 server:
   port: 8888
   servlet:
     context-path: /sell #配置访问路径为 http://localhost:8888/sell/xxxx
 
+wechat:
+  appid: wxcec0b9e65c084712
+  secret: 05a7e861c1985ced86af77fb8f7163bc
+  mchId: 1529533061
+  mchKey: qwertyuiopasdfghjklzxcvbnm123456
+  keyPath: D:\weixin_sell\WXCertUtil\cert\1529533061_20190327_cert\apiclient_cert.p12  #证书路径
+  notifyUrl: http://xmcc.natapp1.cc/sell/pay/notify  #异步回调

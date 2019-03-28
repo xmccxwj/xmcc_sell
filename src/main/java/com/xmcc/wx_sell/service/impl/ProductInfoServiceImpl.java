@@ -72,4 +72,10 @@ public class ProductInfoServiceImpl implements ProductInfoService {
     public void updateProduct(ProductInfo productInfo) {
         productInfoRepository.save(productInfo);
     }
+
+    @Override
+    @Transactional
+    public ResultResponse<Integer> incrStockById(Integer productQuantity, String productId) {
+        return ResultResponse.success(productInfoRepository.productInfoRepository(productQuantity,productId));
+    }
 }

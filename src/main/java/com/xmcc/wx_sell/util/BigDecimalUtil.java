@@ -19,5 +19,11 @@ public class BigDecimalUtil {
         return price.multiply(bigDecimal);
 
     }
+    //相乘
+    public static boolean equals2(BigDecimal b1,BigDecimal b2){
+
+        return b1.compareTo(b2)==0;
+
+    }
 
 }

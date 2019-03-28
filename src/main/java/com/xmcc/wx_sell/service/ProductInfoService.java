@@ -10,4 +10,6 @@ public interface ProductInfoService {
     ResultResponse<ProductInfo> queryById(String productId);
 
     void updateProduct(ProductInfo productInfo);
+
+    ResultResponse<Integer> incrStockById(Integer productQuantity, String productId);
 }
